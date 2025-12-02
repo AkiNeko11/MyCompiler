@@ -1,0 +1,17 @@
+program compute; 额
+
+123sssd
+
+const a := 5, b := 10;
+var x, y, z;
+
+procedure add(x, y);
+begin
+    z := x + y
+end;
+
+begin
+    read(x, y;
+    call add(x, y);
+    write(z);
+end
