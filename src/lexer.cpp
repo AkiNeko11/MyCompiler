@@ -3,50 +3,27 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
-
+#include "lexer.hpp"
 
 using namespace std;
 
-class Lexer
+Lexer::Lexer(fstream &file):file(file),line(1),column(0),code(0),value(0),strtoken(""),ch('\n'),currentToken(NUL),tokenReady(false)
 {
-    public:
-    Lexer(fstream &file);
-    char GetChar();
-    char GetBC();
-    string Concat();
-    bool IsLetter();
-    bool IsDigit();
-    int Reserved();
-    void Retract();
-    int InsertId();
-    int InsertConst();
-    void ProcError();
-    void start();
-    vector<string> reserved;
-    vector<string> id;
-    vector<string> constTable;
-
-    private:
-    fstream &file;
-    int line;   
-    int column;
-    int code;
-    int value;
-    string strtoken;
-    char ch;
-};
-
-Lexer::Lexer(fstream &file):file(file),line(1),column(0),code(0),value(0),strtoken(""),ch('\n')
-{
-    this->reserved.push_back("program");
+    this->reserved.push_back("odd");
+    this->reserved.push_back("begin");
+    this->reserved.push_back("end");
+    this->reserved.push_back("if");
+    this->reserved.push_back("then");
+    this->reserved.push_back("while");
+    this->reserved.push_back("do");
+    this->reserved.push_back("call");
     this->reserved.push_back("const");
     this->reserved.push_back("var");
     this->reserved.push_back("procedure");
-    this->reserved.push_back("begin");
-    this->reserved.push_back("end");
-    this->reserved.push_back("read");
     this->reserved.push_back("write");
-    this->reserved.push_back("call");
+    this->reserved.push_back("read");
+    this->reserved.push_back("program");
+    this->reserved.push_back("else");
 }
 
 
@@ -163,6 +140,253 @@ void Lexer::ProcError()
     printf("error: at line %d, column %d\n", this->line, this->column);
 }
 
+// 供语法分析器使用的方法
+unsigned long Lexer::GetToken()
+{
+    return this->currentToken;
+}
+
+string Lexer::GetStrToken()
+{
+    return this->strtoken;
+}
+
+int Lexer::GetLine()
+{
+    return this->line;
+}
+
+int Lexer::GetColumn()
+{
+    return this->column;
+}
+
+void Lexer::NextToken()
+{
+    // 读取下一个token，使用GetBC跳过空白字符
+    this->strtoken = "";  // 每次开始时清空strtoken
+    this->ch = this->GetChar();
+    if(this->file.eof() || this->ch == EOF) 
+    {
+        this->currentToken = NUL;
+        this->tokenReady = true;
+        return;
+    }
+    this->ch = this->GetBC();
+    if(this->file.eof() || this->ch == EOF) 
+    {
+        this->currentToken = NUL;
+        this->tokenReady = true;
+        return;
+    }
+
+    if(this->IsLetter()) {
+        while(this->IsLetter() || this->IsDigit()) 
+        {
+            this->strtoken = this->Concat();
+            this->ch = this->GetChar();
+            if(this->file.eof() || this->ch == EOF) break;
+            if(this->ch == ' ' || this->ch == '\n' || this->ch == '\t') break;
+        }
+        if(!this->file.eof() && this->ch != EOF && this->ch != -1) 
+        {
+            this->Retract();
+        }
+        this->code = this->Reserved();
+        if(this->code == -1)  // 非保留字
+        {
+            this->value = this->InsertId();
+            this->currentToken = IDENT;
+        }
+        else
+        {
+            // 根据保留字编码设置token类型
+            switch(this->code) {
+                case 0: this->currentToken = ODD_SYM; break;
+                case 1: this->currentToken = BEGIN_SYM; break;
+                case 2: this->currentToken = END_SYM; break;
+                case 3: this->currentToken = IF_SYM; break;
+                case 4: this->currentToken = THEN_SYM; break;
+                case 5: this->currentToken = WHILE_SYM; break;
+                case 6: this->currentToken = DO_SYM; break;
+                case 7: this->currentToken = CALL_SYM; break;
+                case 8: this->currentToken = CONST_SYM; break;
+                case 9: this->currentToken = VAR_SYM; break;
+                case 10: this->currentToken = PROC_SYM; break;
+                case 11: this->currentToken = WRITE_SYM; break;
+                case 12: this->currentToken = READ_SYM; break;
+                case 13: this->currentToken = PROGM_SYM; break;
+                case 14: this->currentToken = ELSE_SYM; break;
+                default: this->currentToken = NUL; break;
+            }
+        }
+    }
+    else if(this->IsDigit()) 
+    {
+        while(this->IsDigit()) 
+        {
+            this->strtoken = this->Concat();
+            this->ch = this->GetChar();
+            if(this->file.eof() || this->ch == EOF) break;
+            if(this->ch == ' ' || this->ch == '\n' || this->ch == '\t') break;
+        }
+        
+        if(this->IsLetter())
+        {
+            // 非法：数字后面直接跟字母，这里我们采取的是吃掉后续字母数字，直到遇到分隔符
+            ProcError();
+            while(this->IsLetter() || this->IsDigit())
+            {
+                this->ch = this->GetChar();
+                if(this->file.eof() || this->ch == EOF) break;
+            }
+            if(!this->file.eof() && this->ch != EOF)
+                this->Retract();
+            this->currentToken = NUL;   // 将当前token类型设置为NUL，表示非法，后续会设置非法类型
+            this->tokenReady = true;
+            return;
+        }
+
+        if(!this->file.eof() && this->ch != EOF && this->ch != -1) 
+        {
+            this->Retract();
+        }
+        this->value = this->InsertConst();
+        this->currentToken = NUMBER;
+    }
+    else if(this->ch == '=')
+    {
+        this->strtoken = "=";
+        this->currentToken = EQL;
+    }
+    else if(this->ch == '+')
+    {
+        this->strtoken = "+";
+        this->currentToken = PLUS;
+    }
+    else if(this->ch == '-')
+    {
+        this->strtoken = "-";
+        this->currentToken = MINUS;
+    }
+    else if(this->ch == '*')
+    {
+        this->strtoken = "*";
+        this->ch = this->GetChar();
+        if (this->ch == '*')
+        {
+            this->strtoken = "**";
+            // PL/0不支持**，这里作为错误处理，说实话有点左右脑互搏了，明明词法分析书上参考的部分给的是power**，但是这里又不支持了，给我看笑了
+            ProcError();
+            this->currentToken = NUL;
+        }
+        else
+        {
+            if(!this->file.eof()) {
+                this->Retract();
+            }
+            this->currentToken = MULTI;
+        }
+    }
+    else if(this->ch == '/')
+    {
+        this->strtoken = "/";
+        this->currentToken = DIVIS;
+    }
+    else if(this->ch == ';')
+    {
+        this->strtoken = ";";
+        this->currentToken = SEMICOLON;
+    }
+    else if(this->ch == ':')
+    {
+        this->ch = this->GetChar();
+        if(this->ch == '=')
+        {
+            this->strtoken = ":=";
+            this->currentToken = ASSIGN;
+        }
+        else
+        {
+            if(!this->file.eof()) {
+                this->Retract();
+            }
+            this->strtoken = ":";
+            // 单独的:不是合法token，报错
+            ProcError();
+            this->currentToken = NUL;
+        }
+    }
+    else if(this->ch == ',')
+    {
+        this->strtoken = ",";
+        this->currentToken = COMMA;
+    }
+    else if(this->ch == '(')
+    {
+        this->strtoken = "(";
+        this->currentToken = LPAREN;
+    }
+    else if(this->ch == ')')
+    {
+        this->strtoken = ")";
+        this->currentToken = RPAREN;
+    }
+    else if(this->ch == '<')
+    {
+        this->strtoken = "<";
+        this->ch = this->GetChar();
+        if(this->ch == '=')
+        {
+            this->strtoken = "<=";
+            this->currentToken = LEQ;
+        }
+        else if(this->ch == '>')
+        {
+            this->strtoken = "<>";
+            this->currentToken = NEQ;
+        }
+        else
+        {
+            if(!this->file.eof()) {
+                this->Retract();
+            }
+            this->currentToken = LSS;
+        }
+    }
+    else if(this->ch == '>')
+    {
+        this->strtoken = ">";
+        this->ch = this->GetChar();
+        if(this->ch == '=')
+        {
+            this->strtoken = ">=";
+            this->currentToken = GEQ;
+        }
+        else
+        {
+            if(!this->file.eof()) {
+                this->Retract();
+            }
+            this->currentToken = GRT;
+        }
+    }
+    else if(this->ch != EOF && this->ch != -1) 
+    {
+        // 遇到非法字符，报告错误并跳过
+        this->strtoken = string(1, this->ch);
+        ProcError();
+        // 跳过这个字符，继续读取下一个token
+        this->currentToken = NUL;
+        this->tokenReady = true;
+        // 递归调用NextToken继续读取（但使用循环避免栈溢出）
+        // 这里直接返回NUL，让调用者处理
+        return;
+    }
+    
+    this->tokenReady = true;
+}
+
 void Lexer::start()
 {
     while(!this->file.eof())
@@ -209,11 +433,10 @@ void Lexer::start()
                 if(this->ch == ' ' || this->ch == '\n') break;
             }
             
-            // 第二步：关键！检查数字后面紧跟的是不是字母
+            // 第二步检查数字后面紧跟的是不是字母
             if(this->IsLetter())
             {
                 // 非法：数字后面直接跟字母，如 123abc
-                // 可以选择：吃掉整个非法标识符（跳过到分隔符），或者直接退出
                 // 这里我们吃掉后续字母数字，直到遇到分隔符
                 ProcError();
                 while(this->IsLetter() || this->IsDigit())
@@ -292,20 +515,5 @@ void Lexer::start()
             this->ProcError();
         }
     }
-}
-
-int main() {
-    fstream file("test.txt");
-    if (!file.is_open()) {
-        cout << "Error: Failed to open file" << endl;
-        return 1;
-    }
-
-    Lexer lexer(file);
-    
-    lexer.start();
-
-    return 0;
-
 }
 

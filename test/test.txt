@@ -1,4 +1,4 @@
-program compute; 额
+program compute; %
 
 123sssd
 

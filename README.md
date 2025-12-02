@@ -31,3 +31,9 @@ docker rm my-compiler
 g++ lexer.cpp -o lexer
 
 ./lexer
+
+g++ -o parser src/parser.cpp src/lexer.cpp -I./Include
+
+./parser test/test.txt
+
+./parser test/test.txt > output.txt
