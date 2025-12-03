@@ -101,11 +101,10 @@ int main() {
                 if(ch == ' ' || ch == '\n') break;
             }
             
-            // 第二步：关键！检查数字后面紧跟的是不是字母
+            // 第二步检查数字后面紧跟的是不是字母
             if(IsLetter(ch))
             {
                 // 非法：数字后面直接跟字母，如 123abc
-                // 可以选择：吃掉整个非法标识符（跳过到分隔符），或者直接退出
                 // 这里我们吃掉后续字母数字，直到遇到分隔符
                 ProcError();
                 while(IsLetter(ch) || IsDigit(ch))
@@ -215,7 +214,7 @@ char GetBC(fstream &file, char ch)
     if(ch == EOF || ch == -1) return ch;
     
     char ch2 = ch;
-    // 使用 isspace() 函数判断所有空白字符（包括空格、制表符、换行符等）
+    // 使用 isspace() 函数判断所有空白字符（包括空格、制表符、换行符等） 这里可以检测包括LF和CRLF的所有换行符，一开始用的是\n，但是发现没法检测windows下的\r\n，所以改用了isspace()
     while(isspace(static_cast<unsigned char>(ch2)) && !file.eof()) 
     {
         ch2 = GetChar(file);  // 调用GetChar，自动更新行号和列号
