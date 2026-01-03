@@ -2,7 +2,7 @@
 
 ## 一、项目概述
 
-本项目实现了一个 **PL/0 语言编译器**，包含完整的编译流程：词法分析、语法分析、语义分析、中间代码生成以及解释执行。
+本项目实现了一个完整的 **PL/0 语言编译器**，包含词法分析、语法分析、语义分析、中间代码生成以及解释执行等全部编译流程。
 
 ### 1.1 什么是 PL/0？
 
@@ -16,15 +16,22 @@ PL/0 是由 Niklaus Wirth（Pascal 语言之父）设计的一门教学用编程
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   源代码     │ -> │  词法分析    │ -> │  语法分析    │ -> │  语义分析    │
+│  源代码      │ -> │  词法分析    │ -> │  语法分析    │ -> │  语义分析    │
 │  (UTF-8)    │    │  (Lexer)    │    │  (Parser)   │    │ (SymTable)  │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-                                                                │
-                   ┌─────────────┐    ┌─────────────┐           │
-                   │  解释执行    │ <- │ P-Code生成  │ <---------┘
-                   │(Interpreter)│    │ (PCodeList) │
-                   └─────────────┘    └─────────────┘
+                                                               │
+                  ┌─────────────┐    ┌─────────────┐           │
+                  │  解释执行    │ <- │ P-Code生成  │ <---------┘
+                  │(Interpreter)│    │ (PCodeList) │
+                  └─────────────┘    └─────────────┘
 ```
+
+### 1.3 项目特性
+
+- **UTF-8 支持**：支持读取 UTF-8 编码的源文件（含 BOM 检测）
+- **缓冲区读取**：采用按需加载的缓冲区机制，支持大文件处理
+- **完善的错误处理**：支持错误恢复，可报告多个错误
+- **详细的调试信息**：输出编译过程的详细信息
 
 ---
 
@@ -84,30 +91,11 @@ PL/0 是由 Niklaus Wirth（Pascal 语言之父）设计的一门教学用编程
 program example;
 const pi := 3;
 var x, y, z;
-
-procedure add(a, b);
-var result;
-begin
-    result := a + b;
-    write(result)
-end;
-
 begin
     x := 10;
     y := 20;
-    call add(x, y);
-    
-    if x < y then
-        write(x)
-    else
-        write(y);
-    
-    z := 0;
-    while z < 5 do
-    begin
-        write(z);
-        z := z + 1
-    end
+    z := x + y;
+    write(z)
 end
 ```
 
@@ -115,38 +103,88 @@ end
 
 ## 三、模块详解
 
-### 3.1 类型定义模块 (types.hpp/cpp)
+### 3.1 类型定义模块 (Types.hpp/cpp)
 
 #### 功能
-定义全局常量、宏、以及 UTF-8 文件读取类。
+- 定义全局常量和宏
+- 实现带缓冲区的 UTF-8 文件读取器
+- 提供字符串转换工具函数
 
-#### 核心内容
+#### Token 类型定义
 
-**Token 类型定义**（使用位掩码，便于组合判断）：
+使用位掩码设计，便于进行集合运算：
+
 ```cpp
-#define IDENT 0x400        // 标识符
-#define NUMBER 0x800       // 数值
-#define PLUS 0x40          // +
-#define MINUS 0x80         // -
+// 使用示例：判断是否为加减运算符
+if (tokenType & (PLUS | MINUS)) { ... }
+
+// 关系运算符
+#define EQL 0x1        // =
+#define NEQ 0x2        // <>
+#define LSS 0x4        // <
+
+// 算术运算符
+#define PLUS 0x40      // +
+#define MINUS 0x80     // -
+
+// 标识符与数字
+#define IDENT 0x400    // 标识符
+#define NUMBER 0x800   // 数值
+
+// 保留字
 #define BEGIN_SYM 0x40000  // begin
 #define END_SYM 0x80000    // end
-// ... 更多定义
 ```
 
-**ReadUnicode 类**：负责读取 UTF-8 编码的源文件，转换为 Unicode 字符串。
+#### ReadUnicode 类（带缓冲区）
+
+采用按需加载的缓冲区机制，不一次性读取整个文件：
 
 ```cpp
+const size_t BUFFER_SIZE = 1024;  // 缓冲区大小
+
 class ReadUnicode {
-    wstring progm_w_str;  // 存储源代码的 Unicode 字符串
+private:
+    ifstream file;                 // 文件流
+    wchar_t buffer[BUFFER_SIZE];   // 字符缓冲区
+    size_t bufferStartPos;         // 缓冲区起始位置
+    size_t bufferLength;           // 有效字符数
     
-    void readFile2USC2(string filename);  // 读取文件
-    wchar_t getProgmWStr(size_t pos);     // 获取指定位置字符
+    bool loadNextBuffer();         // 加载下一块数据
+    bool readOneChar(wchar_t& ch); // 读取单个UTF-8字符
+    
+public:
+    void readFile2USC2(string filename);      // 打开文件
+    wchar_t getProgmWStr(const size_t pos);   // 获取指定位置字符
+    bool isEmpty();                           // 是否为空
+    size_t getLoadedCount();                  // 已加载字符数
 };
+```
+
+**工作原理：**
+```
+文件:  [=== 块1 ===][=== 块2 ===][=== 块3 ===]...
+            ↑
+        当前缓冲区
+
+词法分析器请求位置 → 检查是否在缓冲区内
+    ↓ 是 → 直接返回
+    ↓ 否 → 自动加载下一块缓冲区
+```
+
+#### 工具函数
+
+```cpp
+// 宽字符串转整数（使用位运算优化）
+int w_str2int(wstring numStr);
+
+// 整数转宽字符串
+wstring int2w_str(int num);
 ```
 
 ---
 
-### 3.2 词法分析器 (lexer.hpp/cpp)
+### 3.2 词法分析器 (Lexer.hpp/cpp)
 
 #### 功能
 将源代码字符流转换为 Token（词法单元）流。
@@ -171,9 +209,9 @@ private:
     size_t colPos, rowPos;   // 列号、行号（用于报错定位）
     
 public:
-    void GetWord();          // 获取下一个 Token（核心函数）
+    void GetWord();                // 获取下一个 Token
     unsigned long GetTokenType();  // 获取 Token 类型
-    wstring GetStrToken();   // 获取 Token 字符串
+    wstring GetStrToken();         // 获取 Token 字符串
 };
 ```
 
@@ -203,7 +241,7 @@ public:
 
 ---
 
-### 3.3 语法分析器 (parser.hpp/cpp)
+### 3.3 语法分析器 (Parser.hpp/cpp)
 
 #### 功能
 1. 检查源代码是否符合语法规则
@@ -552,6 +590,16 @@ begin
 end
 ```
 
+### 编译输出
+
+```
+[Info] Opening file: test/simple.txt
+[Info] Compiling 'test/simple.txt' ...
+[Info] End of file reached, total 56 characters loaded
+No error. Congratulations!
+______________________________Compile compelete!________________________________
+```
+
 ### 符号表
 
 | 位置 | 名称 | 类型 | 层级 | 偏移 |
@@ -585,31 +633,28 @@ write: 5
 
 ---
 
-## 五、项目文件说明
+## 五、项目文件结构
 
 ```
 MyCompiler/
 ├── Include/                 # 头文件目录
-│   ├── types.hpp           # 类型定义、宏常量
-│   ├── lexer.hpp           # 词法分析器声明
-│   ├── parser.hpp          # 语法分析器声明
+│   ├── Types.hpp           # 类型定义、宏常量、UTF-8读取器
+│   ├── Lexer.hpp           # 词法分析器声明
+│   ├── Parser.hpp          # 语法分析器声明
 │   ├── SymTable.hpp        # 符号表声明
 │   ├── PCode.hpp           # P-Code 定义
 │   ├── Interpreter.hpp     # 解释器声明
 │   └── ErrorHandle.hpp     # 错误处理声明
 ├── src/                     # 源文件目录
 │   ├── main.cpp            # 主程序入口
-│   ├── types.cpp           # UTF-8 读取实现
-│   ├── lexer.cpp           # 词法分析器实现
-│   ├── parser.cpp          # 语法分析器实现
+│   ├── Types.cpp           # UTF-8 读取器实现
+│   ├── Lexer.cpp           # 词法分析器实现
+│   ├── Parser.cpp          # 语法分析器实现
 │   ├── SymTable.cpp        # 符号表实现
 │   ├── PCode.cpp           # P-Code 生成实现
 │   ├── Interpreter.cpp     # 解释器实现
 │   └── ErrorHandle.cpp     # 错误处理实现
 ├── test/                    # 测试文件目录
-│   ├── simple.txt          # 简单测试
-│   ├── test.txt            # 完整测试
-│   └── ...
 └── README.md               # 本文档
 ```
 
@@ -629,14 +674,25 @@ g++ -I Include src/*.cpp -o compiler.exe
 ./compiler.exe
 ```
 
-然后根据菜单选择功能，输入测试文件名即可。
+### 菜单界面
+
+```
+========== PL/0 编译器 ==========
+1. 词法分析测试
+2. 语法分析测试
+3. 符号表测试
+4. P-Code生成测试
+5. 完整编译运行
+0. 退出
+==================================
+请选择功能:
+```
 
 ---
 
 ## 七、参考资料
 
-1. 《编译原理》- 陈意云
-2. 《编译原理及实践》- Kenneth C. Louden
-3. Wirth, N. "The programming language Pascal"
-4. PL/0 Wikipedia: https://en.wikipedia.org/wiki/PL/0
+1. Wirth, N. (1976). *Algorithms + Data Structures = Programs*
+2. Aho, A. V., Lam, M. S., Sethi, R., & Ullman, J. D. (2006). *Compilers: Principles, Techniques, and Tools* (2nd ed.)
+3. 陈火旺 等. (2000). *程序设计语言编译原理* (第3版). 国防工业出版社
 
