@@ -1,17 +1,20 @@
-program compute; %
-
-123sssd
-
-const a := 5, b := 10;
-var x, y, z;
-
-procedure add(x, y);
+program recursive;
+var n, result;
+procedure fact(n);
+var temp;
 begin
-    z := x + y
-end;
+    if n <= 1 then
+        result := 1
+    else
+    begin
+        temp := n;
+        call fact(n - 1);
+        result := result * temp
+    end
+end
 
 begin
-    read(x, y;
-    call add(x, y);
-    write(z);
+    read(n);
+    call fact(n);
+    write(result)
 end

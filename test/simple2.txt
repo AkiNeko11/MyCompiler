@@ -1,0 +1,7 @@
+program simple;
+var x;
+begin
+    x := 5;
+    write(x)
+end
+
