@@ -871,8 +871,7 @@ void Parser::factor()
         if (lexer.GetTokenType() == RPAREN)
             lexer.GetWord();
         else
-            errorHandle.error(MISSING_DETAILED, L"')'",
-                              L"Expected closing parenthesis ')'.",
+            errorHandle.error(MISSING, L"')'",
                               lexer.GetPreWordRow(), lexer.GetPreWordCol(), lexer.GetRowPos(), lexer.GetColPos());
     }
     else

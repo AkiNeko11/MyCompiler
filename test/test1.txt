@@ -7,7 +7,7 @@ begin
 end
 
 begin
-    read((x, y));
+    read(x, y);
     call add(x, y);
     write(z)
 end

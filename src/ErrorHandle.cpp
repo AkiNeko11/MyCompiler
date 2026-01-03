@@ -215,11 +215,8 @@ void ErrorHandle::InitErrorHandle()
     
     // 初始化错误信息模板
     errMsg[MISSING] = L"missing %s";
-    errMsg[MISSING_DETAILED] = L"missing %s, %s";
     errMsg[UNDECLARED_IDENT] = L"use of undeclared identifier '%s'";
     errMsg[UNDECLARED_PROC] = L"use of undeclared procedure '%s'";
-    errMsg[REDECLEARED_IDENT] = L"redefinition of '%s'";
-    errMsg[REDECLEARED_PROC] = L"redefinition of procedure '%s'";
     errMsg[ILLEGAL_DEFINE] = L"invalid %s";
     errMsg[ILLEGAL_WORD] = L"invalid token %s";
     errMsg[ILLEGAL_RVALUE_ASSIGN] = L"expression is not assignable";
@@ -229,8 +226,6 @@ void ErrorHandle::InitErrorHandle()
     errMsg[INCOMPATIBLE_VAR_LIST] = L"argument count mismatch";
     errMsg[UNDEFINED_PROC] = L"call to undefined procedure '%s'";
     errMsg[SYNTAX_ERROR] = L"%s; expected %s";
-    errMsg[INVALID_SYNTAX] = L"invalid syntax near '%s': %s";
-    errMsg[UNEXPECTED_TOKEN] = L"unexpected token '%s', expected %s";
 }
 
 /**
@@ -252,7 +247,7 @@ void ErrorHandle::error(const unsigned int n, const size_t preWordRow,
     swprintf_s(msg, sizeof(msg) / sizeof(wchar_t), errMsg[n].c_str());
     
     size_t row = rowPos, col = colPos;
-    if (n == REDUNDENT || n == MISSING || n == UNDECLARED_PROC) {
+    if (n == ILLEGAL_RVALUE_ASSIGN || n == INCOMPATIBLE_VAR_LIST) {
         row = preWordRow;
         col = preWordCol;
     }
@@ -273,17 +268,64 @@ void ErrorHandle::error(const unsigned int n, const wchar_t* extra,
     size_t row = rowPos, col = colPos;
     size_t highlightLen = wcslen(extra);
     
-    if (n == REDUNDENT || n == MISSING || n == UNDECLARED_PROC) {
-        row = preWordRow;
-        col = preWordCol;
+    // MISSING 应该指向当前位置（表示缺失的符号应该在这之前出现）
+    if (n == MISSING) {
+        // 对于 MISSING 错误，使用前一行/前一位置，指向应该插入符号的地方
+        // 如果当前位置在行首（col==1），说明跨行了，应该用前一个词的行尾
+        if (colPos == 1 || rowPos != preWordRow) {
+            row = preWordRow;
+            // 指向前一个词之后的位置（前一个词结束处）
+            col = preWordCol + 1;  // 前一词后一个位置
+        } else {
+            // 同一行，指向当前词之前
+            row = rowPos;
+            col = colPos > 1 ? colPos - 1 : colPos;
+        }
+        highlightLen = 1;  // 缺失符号只高亮1个位置
+    }
+    else
+    {
+        row = rowPos;
+        col = colPos;
     }
     
     // 生成修复建议
     const wchar_t* suggestion = nullptr;
     if (n == MISSING) {
-        // 可以添加更多智能建议
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Expected '%s' here", extra);
+        suggestion = suggestionBuf;
     }
-    
+    else if(n == UNDECLARED_IDENT||UNDECLARED_PROC)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Declare '%s' first", extra);
+        suggestion = suggestionBuf;
+    }
+    else if(n == ILLEGAL_DEFINE||n == ILLEGAL_WORD)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Please check the '%s'", extra);
+        suggestion = suggestionBuf;
+    }
+    else if(n == EXPECT)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Expected '%s' here", extra);
+        suggestion = suggestionBuf;
+    }
+    else if(n == REDUNDENT)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Remove '%s' here", extra);
+        suggestion = suggestionBuf;
+    }
+    else if(n == UNDEFINED_PROC)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Define '%s' first", extra);
+        suggestion = suggestionBuf;
+    }
     printFormattedError(LEVEL_ERROR, msg, row, col, highlightLen > 0 ? highlightLen : 1, suggestion);
 }
 
@@ -296,14 +338,24 @@ void ErrorHandle::error(const unsigned int n, const wchar_t* extra1, const wchar
 {
     wchar_t msg[256] = L"";
     swprintf_s(msg, sizeof(msg) / sizeof(wchar_t), errMsg[n].c_str(), extra1, extra2);
-    
+    size_t highlightLen = wcslen(extra2);
     size_t row = rowPos, col = colPos;
-    if (n == REDUNDENT || n == MISSING || n == UNDECLARED_PROC) {
-        row = preWordRow;
-        col = preWordCol;
+
+    // 生成修复建议
+    const wchar_t* suggestion = nullptr;
+    if (n == EXPECT_STH_FIND_ANTH) {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Did you mean '%s' instead of '%s'?", extra1, extra2);
+        suggestion = suggestionBuf;
+    }
+    else if(n == SYNTAX_ERROR)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Please check the syntax: '%s'", extra1);
+        suggestion = suggestionBuf;
     }
     
-    printFormattedError(LEVEL_ERROR, msg, row, col);
+    printFormattedError(LEVEL_ERROR, msg, row, col, highlightLen > 0 ? highlightLen : 1, suggestion);
 }
 
 /**
