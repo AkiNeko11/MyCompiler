@@ -30,7 +30,12 @@ PL/0 是由 Niklaus Wirth（Pascal 语言之父）设计的一门教学用编程
 
 - **UTF-8 支持**：支持读取 UTF-8 编码的源文件（含 BOM 检测）
 - **缓冲区读取**：采用按需加载的缓冲区机制，支持大文件处理
-- **完善的错误处理**：支持错误恢复，可报告多个错误
+- **Clang 风格错误诊断**：
+  - 🎨 彩色控制台输出（错误红色、警告黄色、提示绿色）
+  - 📍 源码行显示与精准位置指示（`^^^`）
+  - 💡 智能修复建议（hint 提示）
+  - 📊 编译摘要统计
+- **完善的错误恢复**：支持跳过错误继续编译，可报告多个错误
 - **详细的调试信息**：输出编译过程的详细信息
 
 ---
@@ -560,19 +565,136 @@ void Interpreter::opr_return() {
 
 ### 3.7 错误处理 (ErrorHandle.hpp/cpp)
 
-#### 错误类型
+#### 功能特性
 
-| 错误码 | 含义 |
-|--------|------|
-| MISSING | 缺少某符号 |
-| EXPECT | 期望某符号 |
-| ILLEGAL_WORD | 非法单词 |
-| ILLEGAL_DEFINE | 非法定义 |
-| UNDECLARED_IDENT | 未声明的标识符 |
-| UNDECLARED_PROC | 未声明的过程 |
-| REDECLEARED_IDENT | 重复声明的标识符 |
-| REDECLEARED_PROC | 重复声明的过程 |
-| ILLEGAL_RVALUE_ASSIGN | 对右值赋值（给常量赋值） |
+本编译器实现了**类似 Clang 风格的专业错误诊断系统**，具有以下特性：
+
+- **彩色控制台输出**：使用不同颜色区分错误级别和代码元素
+- **源码高亮显示**：直接在源代码行中用红色标记错误位置
+- **精准位置指示**：使用 `^` 符号精确指向错误所在位置
+- **智能修复建议**：根据错误类型自动生成 `hint` 提示信息
+- **编译摘要统计**：编译结束后显示错误和警告的统计信息
+
+#### 错误输出格式
+
+```
+文件名:行号:列号: error: 错误信息
+   行号 | 源代码内容（错误部分红色高亮）
+      | ^^^^ （绿色位置指示器）
+      | hint: 修复建议（绿色）
+```
+
+#### 错误输出示例
+
+```
+test.txt:7:12: error: missing ;
+   7 |     z := x + y
+     |              ^
+     | hint: Expected ';' here
+
+test.txt:5:5: error: use of undeclared identifier 'abc'
+   5 |     abc := 10
+     |     ^^^
+     | hint: Declare 'abc' first
+
+─────────────────────────────────────────────────────────
+✗ 2 error(s) generated.
+─────────────────────────────────────────────────────────
+Compilation failed.
+```
+
+#### 颜色定义
+
+| 颜色 | 用途 |
+|------|------|
+| 红色 (COLOR_RED) | 错误标签、错误位置高亮 |
+| 黄色 (COLOR_YELLOW) | 警告标签 |
+| 绿色 (COLOR_GREEN) | 位置指示器 `^`、修复建议、成功信息 |
+| 青色 (COLOR_CYAN) | 行号、提示标签 |
+| 白色 (COLOR_WHITE) | 文件位置信息、错误消息正文 |
+
+#### 错误级别
+
+| 级别 | 含义 |
+|------|------|
+| LEVEL_NOTE | 注释/提示信息 |
+| LEVEL_WARNING | 警告（不阻止编译） |
+| LEVEL_ERROR | 错误（编译失败） |
+| LEVEL_FATAL | 致命错误（立即终止） |
+
+#### 错误类型与修复建议
+
+| 错误码 | 含义 | 自动生成的修复建议 |
+|--------|------|-------------------|
+| MISSING | 缺少某符号 | `Expected 'X' here` |
+| EXPECT | 期望某符号 | `Expected 'X' here` |
+| EXPECT_STH_FIND_ANTH | 期望A但发现B | `Did you mean 'A' instead of 'B'?` |
+| ILLEGAL_WORD | 非法单词 | `Please check the 'X'` |
+| ILLEGAL_DEFINE | 非法定义 | `Please check the 'X'` |
+| UNDECLARED_IDENT | 未声明的标识符 | `Declare 'X' first` |
+| UNDECLARED_PROC | 未声明的过程 | `Declare 'X' first` |
+| UNDEFINED_PROC | 过程未定义 | `Define 'X' first` |
+| REDUNDENT | 多余的符号 | `Remove 'X' here` |
+| SYNTAX_ERROR | 语法错误 | `Please check the syntax: 'X'` |
+| ILLEGAL_RVALUE_ASSIGN | 对右值赋值（给常量赋值） | - |
+| INCOMPATIBLE_VAR_LIST | 参数数量不匹配 | - |
+
+#### 核心实现
+
+```cpp
+// 打印源码片段和位置指示器
+void printSourceSnippet(size_t row, size_t col, size_t highlightLen) {
+    wstring sourceLine = getSourceLine(row);
+    
+    // 打印行号
+    setColor(COLOR_CYAN);
+    wcout << L"   " << row << L" | ";
+    resetColor();
+    
+    // 打印源代码行，高亮错误位置（红色标记）
+    for (size_t i = 0; i < sourceLine.length(); ++i) {
+        if (i + 1 >= col && i + 1 < col + highlightLen) {
+            setColor(COLOR_RED);  // 错误位置红色高亮
+            wcout << sourceLine[i];
+            resetColor();
+        } else {
+            wcout << sourceLine[i];
+        }
+    }
+    
+    // 打印位置指示器 (^^^^)
+    setColor(COLOR_GREEN);
+    wcout << generatePointer(col, highlightLen) << endl;
+}
+
+// 根据错误类型生成修复建议
+if (n == MISSING) {
+    swprintf_s(suggestionBuf, 256, L"Expected '%s' here", extra);
+} else if (n == UNDECLARED_IDENT || n == UNDECLARED_PROC) {
+    swprintf_s(suggestionBuf, 256, L"Declare '%s' first", extra);
+} else if (n == REDUNDENT) {
+    swprintf_s(suggestionBuf, 256, L"Remove '%s' here", extra);
+}
+// ... 其他错误类型
+```
+
+#### 编译摘要
+
+编译结束后自动输出统计摘要：
+
+```cpp
+void printSummary() {
+    if (errCnt == 0 && warnCnt == 0) {
+        wcout << L"✓ Build succeeded with no errors or warnings." << endl;
+    } else {
+        if (errCnt > 0)
+            wcout << L"✗ " << errCnt << L" error(s)";
+        if (warnCnt > 0)
+            wcout << L"⚠ " << warnCnt << L" warning(s)";
+        wcout << L" generated." << endl;
+    }
+}
+```
 
 ---
 

@@ -252,7 +252,16 @@ void ErrorHandle::error(const unsigned int n, const size_t preWordRow,
         col = preWordCol;
     }
     
-    printFormattedError(LEVEL_ERROR, msg, row, col);
+    // 生成修复建议
+    const wchar_t* suggestion = nullptr;
+    if (n == ILLEGAL_RVALUE_ASSIGN) {
+        suggestion = L"Constants cannot be modified. Use 'var' instead of 'const' if you need to change this value.";
+    }
+    else if (n == INCOMPATIBLE_VAR_LIST) {
+        suggestion = L"Check the number of arguments. The procedure expects a different number of parameters.";
+    }
+    
+    printFormattedError(LEVEL_ERROR, msg, row, col, 1, suggestion);
 }
 
 /**
@@ -296,7 +305,7 @@ void ErrorHandle::error(const unsigned int n, const wchar_t* extra,
         swprintf_s(suggestionBuf, 256, L"Expected '%s' here", extra);
         suggestion = suggestionBuf;
     }
-    else if(n == UNDECLARED_IDENT||UNDECLARED_PROC)
+    else if(n == UNDECLARED_IDENT||n == UNDECLARED_PROC)
     {
         static wchar_t suggestionBuf[256];
         swprintf_s(suggestionBuf, 256, L"Declare '%s' first", extra);
