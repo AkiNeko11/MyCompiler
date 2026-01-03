@@ -302,7 +302,7 @@ void ErrorHandle::error(const unsigned int n, const wchar_t* extra,
     const wchar_t* suggestion = nullptr;
     if (n == MISSING) {
         static wchar_t suggestionBuf[256];
-        swprintf_s(suggestionBuf, 256, L"Expected '%s' here", extra);
+        swprintf_s(suggestionBuf, 256, L"Add '%s' here", extra);
         suggestion = suggestionBuf;
     }
     else if(n == UNDECLARED_IDENT||n == UNDECLARED_PROC)

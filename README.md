@@ -626,7 +626,7 @@ Compilation failed.
 
 | 错误码 | 含义 | 自动生成的修复建议 |
 |--------|------|-------------------|
-| MISSING | 缺少某符号 | `Expected 'X' here` |
+| MISSING | 缺少某符号 | `Add 'X' here` |
 | EXPECT | 期望某符号 | `Expected 'X' here` |
 | EXPECT_STH_FIND_ANTH | 期望A但发现B | `Did you mean 'A' instead of 'B'?` |
 | ILLEGAL_WORD | 非法单词 | `Please check the 'X'` |
@@ -636,8 +636,8 @@ Compilation failed.
 | UNDEFINED_PROC | 过程未定义 | `Define 'X' first` |
 | REDUNDENT | 多余的符号 | `Remove 'X' here` |
 | SYNTAX_ERROR | 语法错误 | `Please check the syntax: 'X'` |
-| ILLEGAL_RVALUE_ASSIGN | 对右值赋值（给常量赋值） | - |
-| INCOMPATIBLE_VAR_LIST | 参数数量不匹配 | - |
+| ILLEGAL_RVALUE_ASSIGN | 对右值赋值（给常量赋值） | `Constants cannot be modified. Use 'var' instead of 'const' if you need to change this value` |
+| INCOMPATIBLE_VAR_LIST | 参数数量不匹配 | `Check the number of arguments. The procedure expects a different number of parameters` |
 
 #### 核心实现
 
