@@ -1,6 +1,6 @@
-program test8;
-var i;
+program test;
+var x;
 begin
-    while i <= 10
-        write (1)
+    while x >= 10 
+        write(1)
 end

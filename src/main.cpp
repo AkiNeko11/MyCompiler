@@ -49,7 +49,7 @@ void TestLexer()
 {
     string filename = "";
     wcout << L"=== 词法分析测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 simple.txt): ";
+    wcout << L"请输入测试文件名(如 lexer1.txt): "; 
     
     while (cin >> filename)
     {
@@ -79,7 +79,7 @@ void TestParser()
 {
     string filename = "";
     wcout << L"=== 语法分析测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 simple.txt): ";
+    wcout << L"请输入测试文件名(如 parser1.txt): ";
     
     while (cin >> filename)
     {
@@ -104,7 +104,7 @@ void TestSymTable()
 {
     string filename = "";
     wcout << L"=== 符号表测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 simple.txt): ";
+    wcout << L"请输入测试文件名(如 factorial.txt): ";
     
     while (cin >> filename)
     {
@@ -130,7 +130,7 @@ void TestPCode()
 {
     string filename = "";
     wcout << L"=== P-Code生成测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 simple.txt): ";
+    wcout << L"请输入测试文件名(如 factorial.txt): ";
     
     while (cin >> filename)
     {
@@ -157,7 +157,7 @@ void Test()
 {
     string filename = "";
     wcout << L"=== 完整编译测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 test.txt): ";
+    wcout << L"请输入测试文件名(如 factorial.txt): ";
     
     while (cin >> filename)
     {

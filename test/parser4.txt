@@ -1,7 +1,7 @@
-program a;
+program test;
 var x, y, z;
 begin
     x := 10
     y := 20;
-    z := x + y
+    z := x + y;
 end
