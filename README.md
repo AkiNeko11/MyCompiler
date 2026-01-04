@@ -638,6 +638,8 @@ Compilation failed.
 | SYNTAX_ERROR | 语法错误 | `Please check the syntax: 'X'` |
 | ILLEGAL_RVALUE_ASSIGN | 对右值赋值（给常量赋值） | `Constants cannot be modified. Use 'var' instead of 'const' if you need to change this value` |
 | INCOMPATIBLE_VAR_LIST | 参数数量不匹配 | `Check the number of arguments. The procedure expects a different number of parameters` |
+| REDECLEARED_IDENT | 重定义参数 | `Did not redeclare the identifier 'X'` |
+| REDECLEARED_PROC | 重定义过程 | `Did not redeclare the procedure name 'X'` |
 
 #### 核心实现
 

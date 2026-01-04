@@ -1,16 +1,31 @@
-program fibonacci;
-const max := 10;
-var i, a, b, temp;
-begin
-    a := 0;
-    b := 1;
-    i := 0;
-    while i < max do
+program a;
+var x;
+procedure B(n);
+    procedure C(n);
+        procedure E(n);
+        begin
+            x := n-1;
+            write(x)
+        end
     begin
-        write(a);
-        temp := a + b;
-        a := b;
-        b := temp;
-        i := i + 1
+        x:= n-1;
+        write(x)
+    end;
+    procedure D(n);
+    begin
+        x:= n-1;
+        write(x);
+        call C(x);
+        call B(x)
     end
+begin
+    x:= n-1;
+    write(x);
+    call D(x)
+end
+
+begin
+    x := 0;
+    call B(x);
+    write(x)
 end

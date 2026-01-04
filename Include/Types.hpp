@@ -167,7 +167,7 @@ wstring int2w_str(int num);
  * ============================================================ */
 
 // 缓冲区大小常量
-const size_t BUFFER_SIZE = 128;  // 字符缓冲区大小
+const size_t BUFFER_SIZE = 1024;  // 字符缓冲区大小
 
 /**
  * @class ReadUnicode

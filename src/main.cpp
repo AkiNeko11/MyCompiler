@@ -157,7 +157,7 @@ void Test()
 {
     string filename = "";
     wcout << L"=== 完整编译测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 simple.txt): ";
+    wcout << L"请输入测试文件名(如 test.txt): ";
     
     while (cin >> filename)
     {

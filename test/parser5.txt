@@ -1,0 +1,6 @@
+program test6;
+var x;
+begin
+    if x >= 10  
+        write(1)
+end

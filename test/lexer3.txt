@@ -1,0 +1,7 @@
+program test;
+var x, y, z;
+begin
+    x := 10.1;
+    y := 20;
+    z := x + y;
+end

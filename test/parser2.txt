@@ -1,0 +1,5 @@
+program test4;
+begin
+    begin
+        write(1)
+    end

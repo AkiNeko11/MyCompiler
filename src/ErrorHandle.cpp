@@ -226,6 +226,8 @@ void ErrorHandle::InitErrorHandle()
     errMsg[INCOMPATIBLE_VAR_LIST] = L"argument count mismatch";
     errMsg[UNDEFINED_PROC] = L"call to undefined procedure '%s'";
     errMsg[SYNTAX_ERROR] = L"%s; expected %s";
+    errMsg[REDECLEARED_IDENT] = L"redecleared identifier '%s'";
+    errMsg[REDECLEARED_PROC] = L"redecleared procedure name '%s'";
 }
 
 /**
@@ -247,10 +249,6 @@ void ErrorHandle::error(const unsigned int n, const size_t preWordRow,
     swprintf_s(msg, sizeof(msg) / sizeof(wchar_t), errMsg[n].c_str());
     
     size_t row = rowPos, col = colPos;
-    if (n == ILLEGAL_RVALUE_ASSIGN || n == INCOMPATIBLE_VAR_LIST) {
-        row = preWordRow;
-        col = preWordCol;
-    }
     
     // 生成修复建议
     const wchar_t* suggestion = nullptr;
@@ -333,6 +331,18 @@ void ErrorHandle::error(const unsigned int n, const wchar_t* extra,
     {
         static wchar_t suggestionBuf[256];
         swprintf_s(suggestionBuf, 256, L"Define '%s' first", extra);
+        suggestion = suggestionBuf;
+    }
+    else if(n == REDECLEARED_IDENT)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Did not redeclare the identifier '%s'", extra);
+        suggestion = suggestionBuf;
+    }
+    else if(n == REDECLEARED_PROC)
+    {
+        static wchar_t suggestionBuf[256];
+        swprintf_s(suggestionBuf, 256, L"Did not redeclare the procedure name '%s'", extra);
         suggestion = suggestionBuf;
     }
     printFormattedError(LEVEL_ERROR, msg, row, col, highlightLen > 0 ? highlightLen : 1, suggestion);
