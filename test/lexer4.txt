@@ -3,5 +3,5 @@ var x, y, 是;
 begin
     x := 10;
     y := 20;
-    是 := x + y;
+    是 := x + y
 end

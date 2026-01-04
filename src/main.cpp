@@ -104,7 +104,7 @@ void TestSymTable()
 {
     string filename = "";
     wcout << L"=== 符号表测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 factorial.txt): ";
+    wcout << L"请输入测试文件名(如 symbol.txt): ";
     
     while (cin >> filename)
     {
@@ -130,7 +130,7 @@ void TestPCode()
 {
     string filename = "";
     wcout << L"=== P-Code生成测试 ===" << endl;
-    wcout << L"请输入测试文件名(如 factorial.txt): ";
+    wcout << L"请输入测试文件名(如 pcode.txt): ";
     
     while (cin >> filename)
     {
@@ -229,7 +229,7 @@ int main()
             TestPCode();
             break;
         case 5:
-    Test();
+            Test();
             break;
         case 0:
             wcout << L"程序退出" << endl;
