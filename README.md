@@ -817,4 +817,6 @@ g++ -I Include src/*.cpp -o compiler.exe
 1. Wirth, N. (1976). *Algorithms + Data Structures = Programs*
 2. Aho, A. V., Lam, M. S., Sethi, R., & Ullman, J. D. (2006). *Compilers: Principles, Techniques, and Tools* (2nd ed.)
 3. 陈火旺 等. (2000). *程序设计语言编译原理* (第3版). 国防工业出版社
+4.	Appel, A. W. (1998). *Modern Compiler Implementation in C: Basic Techniques*. Cambridge University Press.
+5.	Fraser, C. W., & Hanson, D. R. (1995). *A Retargetable C Compiler: Design and Implementation*. Addison-Wesley.
 
